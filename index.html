@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Stock - La Boutique Concept</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #007aff;
+            --primary-light-color: #e6f2ff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --text-color: #1d1d1f;
+            --text-light-color: #6e6e73;
+            --background-color: #f5f5f7;
+            --card-background-color: #ffffff;
+            --border-color: #e5e5e7;
+            --border-radius: 12px;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-family); background-color: var(--background-color); color: var(--text-color); line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .header { text-align: center; margin-bottom: 32px; position: relative; }
+        .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 4px; }
+        .header h2 { font-size: 1.25rem; font-weight: 400; color: var(--text-light-color); }
+        .nav-tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--border-color); overflow-x: auto; }
+        .nav-tab { padding: 12px 18px; background: none; border: none; font-size: 1rem; font-weight: 500; color: var(--text-light-color); cursor: pointer; transition: all 0.2s ease-in-out; border-bottom: 3px solid transparent; position: relative; top: 1px; white-space: nowrap; }
+        .nav-tab:hover { color: var(--text-color); }
+        .nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background-color: var(--card-background-color); padding: 24px 32px; border-radius: var(--border-radius); margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        .card-header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--background-color); }
+        .card-title { font-size: 1.5rem; font-weight: 600; }
+        .form-group { margin-bottom: 16px; position: relative; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; background-color: #fdfdfd; }
+        .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light-color); }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn:disabled { background-color: #e9e9eb; color: #aaa; cursor: not-allowed; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+        .btn-secondary { background-color: #e9e9eb; color: var(--text-color); }
+        .btn-secondary:hover:not(:disabled) { background-color: #dcdce0; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-danger:hover:not(:disabled) { opacity: 0.85; }
+        .btn-small { padding: 6px 12px; font-size: 0.8rem; }
+        .form-actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+        .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+        .sort-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .sort-controls label { font-weight: 500; color: var(--text-light-color); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { font-weight: 600; font-size: 0.85rem; color: var(--text-light-color); text-transform: uppercase; letter-spacing: 0.5px; background-color: var(--background-color); }
+        tbody tr:hover { background-color: #fafafa; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 32px; }
+        .low-stock-card { background: var(--card-background-color); padding: 20px; border-radius: var(--border-radius); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .low-stock-card .info { display: flex; flex-direction: column; }
+        .low-stock-card .name { font-weight: 600; font-size: 1.1rem; }
+        .low-stock-card .type { font-size: 0.8rem; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; color: white; }
+        .low-stock-card .stock { font-size: 2.5rem; font-weight: 700; line-height: 1; }
+        .stock.critical { color: var(--danger-color); }
+        .stock.warning { color: var(--warning-color); }
+        .wine-entries { display: flex; flex-direction: column; gap: 16px; background-color: var(--background-color); padding: 16px; border-radius: 8px; margin-top: 24px; }
+        .wine-entry { background: var(--card-background-color); padding: 16px; border-radius: 8px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 16px; align-items: flex-start; }
+        .remove-btn { height: 45px; padding: 0 16px; margin-top: 29px; }
+        .current-stock-display { font-size: 0.85rem; color: var(--text-light-color); margin-top: 6px; min-height: 1.4em; font-weight: 600; }
+        .stock-validator { font-size: 0.85rem; margin-top: 6px; min-height: 1.4em; }
+        .stock-validator.valid { color: var(--success-color); }
+        .stock-validator.invalid { color: var(--danger-color); }
+        .type-badge { font-size: 0.8rem; padding: 3px 10px; border-radius: 12px; color: white; display: inline-block; text-transform: capitalize; }
+        .badge-rouge { background-color: #9b2226; }
+        .badge-blanc { background-color: #f7d351; color: #333; }
+        .badge-rose { background-color: #f2a6a6; color: #333; }
+        .badge-champagne { background-color: #e8bd4a; color: #333; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; text-transform: uppercase; }
+        .status-in { background-color: #d1f4d1; color: #00691e; }
+        .status-out { background-color: #ffd1d1; color: #d70015; }
+        .status-return { background-color: #cce5ff; color: #004085; }
+        .status-restock { background-color: #d1eaff; color: #004a99; }
+        .alert { padding: 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-weight: 500; border: 1px solid transparent; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 200%); background-color: var(--text-color); color: white; padding: 14px 22px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: 500; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; }
+        .toast.show { transform: translate(-50%, 0); }
+        .footer-by-osmaweb { text-align: center; font-size: 0.8rem; color: var(--text-light-color); margin-top: 40px; padding-bottom: 20px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 20px; border-radius: var(--border-radius); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: 600; }
+        .close { font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close:hover { color: #000; }
+        @media (max-width: 768px) { .container{padding:16px;} .header h1{font-size:2rem;} .header h2{font-size:1rem;} .card{padding:16px 20px;} .nav-tabs{gap:4px;padding-bottom:0;} .nav-tab{padding:10px 12px;font-size:.9rem;} .dashboard-grid{grid-template-columns:1fr;gap:16px;} .low-stock-card{padding:16px;} .low-stock-card .stock{font-size:2rem;} .wine-entry{grid-template-columns:1fr;gap:12px;} .remove-btn{margin-top:0;height:auto;padding:8px 16px;width:100%;} .form-actions{flex-direction:column;} .form-actions .btn{width:100%;} .table-controls{flex-direction:column;align-items:stretch;gap:12px;} .sort-controls{justify-content:space-between;} table{display:none;} .mobile-cards{display:block;} .mobile-card{background:white;border-radius:8px;padding:16px;margin-bottom:12px;border:1px solid var(--border-color);} .mobile-card-header{font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;} .mobile-card-content{display:flex;flex-direction:column;gap:4px;} .mobile-card-row{display:flex;justify-content:space-between;font-size:.9rem;} .mobile-card-row .label{color:var(--text-light-color);} .mobile-card-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;} .mobile-card-actions .btn{flex:1;min-width:auto;} }
+        @media (max-width: 480px) { .header h1{font-size:1.5rem;} .card{padding:12px 16px;} .nav-tab{padding:8px 10px;font-size:.8rem;} .low-stock-card .stock{font-size:1.5rem;} .modal-content{margin:2% auto;width:95%;} }
+        @media (min-width: 769px) { .mobile-cards{display:none;} table{display:table;} }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Gestion de Stock</h1>
+            <h2>La Boutique Concept</h2>
+            <div style="position: absolute; top: 20px; right: 20px;">
+                <button id="logoutBtn" class="btn btn-secondary btn-small">Déconnexion</button>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">📊 Tableau de bord</button>
+            <button class="nav-tab" data-tab="transactions">📝 Transactions</button>
+            <button class="nav-tab" data-tab="catalog">🍷 Catalogue</button>
+            <button class="nav-tab" data-tab="analysis">📈 Analyse</button>
+            <button class="nav-tab" data-tab="settings">⚙️ Paramètres</button>
+        </nav>
+
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid" id="lowStockDashboard"></div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">Inventaire Détaillé</h2></div>
+                <div class="table-controls"><div class="sort-controls"><label for="inventorySort">Trier par :</label><select class="form-control" id="inventorySort" style="width: auto; min-width: 150px;"><option value="name">Nom (A-Z)</option><option value="name-desc">Nom (Z-A)</option><option value="type">Type</option><option value="stock">Stock (croissant)</option><option value="stock-desc">Stock (décroissant)</option></select></div></div>
+                <table><thead><tr><th>Vin</th><th>Stock Caisses</th><th>Stock Bouteilles</th><th>Total Bouteilles</th></tr></thead><tbody id="detailedInventory"></tbody></table>
+                <div class="mobile-cards" id="detailedInventoryMobile"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">Transaction Rapide</h2></div>
+                <form id="quickForm">
+                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; align-items:flex-start;">
+                         <div class="form-group"><label class="form-label" for="quickType">Type</label><select class="form-control" id="quickType" name="quickType" required><option value="">Sélectionner...</option><option value="entree">📥 Entrée</option><option value="restock">📦 Restock</option><option value="sortie">📤 Sortie</option><option value="retour">↩️ Retour</option></select></div>
+                         <div class="form-group"><label class="form-label" for="quickWine">Vin</label><select class="form-control wine-select" id="quickWine" name="quickWine" required></select><div class="current-stock-display"></div></div>
+                         <div class="form-group"><label class="form-label" for="quickQtyCases">Qté (Caisses)</label><input type="number" class="form-control" id="quickQtyCases" name="quickQtyCases" min="0" placeholder="0"></div>
+                         <div class="form-group"><label class="form-label" for="quickQtyBottles">Qté (Bouteilles)</label><input type="number" class="form-control" id="quickQtyBottles" name="quickQtyBottles" min="0" placeholder="0"><div class="stock-validator" id="quickStockValidator"></div></div>
+                     </div>
+                    <div class="form-actions"><button type="submit" class="btn btn-primary">Valider la Transaction</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="transactions" class="tab-content">
+            <div class="card"><div class="card-header"><h2 class="card-title">Nouvelle Transaction</h2></div><form id="transactionForm"><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;"><div class="form-group"><label class="form-label" for="date">Date</label><input type="date" class="form-control" id="date" name="date" required></div><div class="form-group"><label class="form-label" for="type">Type</label><select class="form-control" id="type" name="type" required><option value="">Sélectionner...</option><option value="entree">📥 Entrée</option><option value="restock">📦 Restock</option><option value="sortie">📤 Sortie</option><option value="retour">↩️ Retour</option></select></div><div class="form-group"><label class="form-label" for="reference">Référence</label><input type="text" class="form-control" id="reference" name="reference" placeholder="Ex: Mariage Dupont"></div></div><div class="wine-entries" id="wineEntries"></div><div class="form-actions"><button type="button" class="btn btn-secondary" id="addWineBtn">+ Ajouter un vin</button><button type="submit" class="btn btn-primary">Enregistrer la Transaction</button></div></form></div>
+            <div class="card"><div class="card-header"><h2 class="card-title">Historique des Transactions</h2></div><input type="search" class="form-control" id="searchInput" placeholder="Rechercher une transaction..." style="max-width: 400px; margin-bottom: 20px;"><table><thead><tr><th>Date</th><th>Type</th><th>Vins</th><th>Référence</th><th>Actions</th></tr></thead><tbody id="transactionsTable"></tbody></table><div class="mobile-cards" id="transactionsTableMobile"></div></div>
+        </div>
+
+        <div id="catalog" class="tab-content">
+            <div class="card"><div class="card-header"><h2 class="card-title">Ajouter un Vin au Catalogue</h2></div><form id="addWineForm" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 16px; align-items: flex-end;"><div class="form-group" style="margin-bottom:0;"><label class="form-label" for="wineName">Nom du Vin</label><input type="text" class="form-control" id="wineName" required></div><div class="form-group" style="margin-bottom:0;"><label class="form-label" for="wineType">Type</label><select class="form-control" id="wineType" required><option value="">Sélectionner...</option><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rose">Rosé</option><option value="champagne">Champagne</option></select></div><div class="form-group" style="margin-bottom:0;"><label class="form-label" for="bottlesPerCase">Bouteilles / caisse</label><input type="number" class="form-control" id="bottlesPerCase" min="1" required placeholder="Ex: 6"></div><button type="submit" class="btn btn-primary" style="height:45px;">Ajouter</button></form></div>
+            <div class="card"><div class="card-header"><h2 class="card-title">Vins au Catalogue</h2></div><div class="table-controls"><input type="search" class="form-control" id="wineSearch" placeholder="Rechercher un vin..." style="max-width: 400px;"><div class="sort-controls"><label for="catalogSort">Trier par :</label><select class="form-control" id="catalogSort" style="width: auto; min-width: 150px;"><option value="name">Nom (A-Z)</option><option value="name-desc">Nom (Z-A)</option><option value="type">Type</option></select></div></div><table><thead><tr><th>Nom</th><th>Type</th><th>Bouteilles / Caisse</th><th>Actions</th></tr></thead><tbody id="wineList"></tbody></table><div class="mobile-cards" id="wineListMobile"></div></div>
+        </div>
+
+        <div id="analysis" class="tab-content">
+             <div class="card">
+                <div class="card-header"><h2 class="card-title">Analyse Détaillée</h2></div>
+                <div class="table-controls" style="flex-direction: column; align-items: stretch; gap: 20px;">
+                    <div class="sort-controls" style="justify-content: flex-start; width: 100%; gap: 20px;">
+                        <div class="form-group" style="margin-bottom:0; flex-grow: 1;">
+                            <label for="analysisReferenceFilter">Filtrer par mot-clé de référence</label>
+                            <input type="search" id="analysisReferenceFilter" class="form-control" placeholder="Ex: Manon, Dupont, Séminaire 2025...">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="analysisPeriod">Filtrer par Période</label>
+                            <select id="analysisPeriod" class="form-control" style="width: auto; min-width: 200px;">
+                                <option value="all">Depuis le début</option>
+                                <option value="30d">30 derniers jours</option>
+                                <option value="90d">90 derniers jours</option>
+                                <option value="year">Cette année</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="analysisChartContainer" style="height: 300px; width: 100%; position: relative;"><p style="text-align:center; color: var(--text-light-color); padding-top: 120px;">Le graphique s'affichera ici.</p></div>
+                    <div class="sort-controls" style="justify-content: flex-end;">
+                        <label for="analysisSort">Trier par :</label>
+                        <select class="form-control" id="analysisSort" style="width: auto; min-width: 180px;"><option value="name">Nom (A-Z)</option><option value="consumption">Consommation (décroissant)</option><option value="returns">Retours (décroissant)</option><option value="rate">Taux de retour (décroissant)</option></select>
+                    </div>
+                </div>
+                <table><thead><tr><th>Vin</th><th>Total Sorties</th><th>Total Retours</th><th>Consommation Nette</th><th>Taux de Retour</th></tr></thead><tbody id="analysisTable"></tbody></table>
+                <div class="mobile-cards" id="analysisTableMobile"></div>
+             </div>
+        </div>
+
+        <div id="settings" class="tab-content">
+            <div class="card"><div class="card-header"><h2 class="card-title">Paramètres Généraux</h2></div><div class="form-group" style="max-width:300px;"><label class="form-label" for="threshold">Seuil d'alerte (total bouteilles)</label><input type="number" class="form-control" id="threshold" value="12" min="0"></div><div class="form-actions"><button class="btn btn-secondary" onclick="exportData()">📊 Exporter (CSV)</button><button class="btn btn-secondary" onclick="printInventory()">🖨️ Imprimer l'Inventaire</button></div></div>
+        </div>
+    </div>
+
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content"><div class="modal-header"><h2 class="modal-title">Modifier la Transaction</h2><span class="close" onclick="closeEditModal()">&times;</span></div><form id="editTransactionForm"><input type="hidden" id="editTransactionId"><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;"><div class="form-group"><label class="form-label" for="editDate">Date</label><input type="date" class="form-control" id="editDate" name="editDate" required></div><div class="form-group"><label class="form-label" for="editType">Type</label><select class="form-control" id="editType" name="editType" required><option value="">Sélectionner...</option><option value="entree">📥 Entrée</option><option value="restock">📦 Restock</option><option value="sortie">📤 Sortie</option><option value="retour">↩️ Retour</option></select></div><div class="form-group"><label class="form-label" for="editReference">Référence</label><input type="text" class="form-control" id="editReference" name="editReference" placeholder="Ex: Mariage Dupont"></div></div><div class="wine-entries" id="editWineEntries"></div><div class="form-actions"><button type="button" class="btn btn-secondary" id="editAddWineBtn">+ Ajouter un vin</button><button type="submit" class="btn btn-primary">Sauvegarder</button><button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annuler</button></div></form></div>
+    </div>
+
+    <div id="toast" class="toast"><span id="toastMsg"></span></div>
+    <div class="footer-by-osmaweb">Conçu et développé par Osmaweb.</div>
+
+<script>
+// ===================================================================================
+// VERSION FINALE COMPLÈTE DU SCRIPT (SANS REDIRECTION)
+// ===================================================================================
+
+const SUPABASE_URL = "https://jvthgikhwaxiqxsjmacl.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dGhnaWtod2F4aXF4c2ptYWNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzNDg4MjMsImV4cCI6MjA2NDkyNDgyM30.f5ixqtktLbDRPT2IyJodmMBbYD2ZK7TRfCNszz2nM48";
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let state = { wines: [], transactions: [], threshold: 12, user: null };
+
+// ===================================================================================
+// DÉMARRAGE DE L'APPLICATION
+// ===================================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Cette version démarre directement l'application sans forcer la connexion.
+    initApp();
+});
+
+async function initApp() {
+    initEventListeners();
+    addWineEntry();
+    showToast('Connexion à la base de données...');
+    await loadDataFromSupabase();
+    updateAll();
+    showToast('Application prête !');
+}
+
+async function handleLogout() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        console.error('Erreur lors de la déconnexion', error);
+        showToast("Erreur de déconnexion.");
+    } else {
+        window.location.href = 'login.html';
+    }
+}
+
+function initEventListeners() {
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    document.querySelectorAll('.nav-tab').forEach(tab => tab.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab)));
+    document.getElementById('quickForm').addEventListener('submit', handleQuickTransaction);
+    document.getElementById('transactionForm').addEventListener('submit', handleTransaction);
+    document.getElementById('editTransactionForm').addEventListener('submit', handleEditTransaction);
+    document.getElementById('addWineForm').addEventListener('submit', handleAddWine);
+    document.getElementById('addWineBtn').addEventListener('click', () => addWineEntry());
+    document.getElementById('editAddWineBtn').addEventListener('click', () => addWineEntry('editWineEntries'));
+    document.getElementById('searchInput').addEventListener('input', updateTransactionsTable);
+    document.getElementById('wineSearch').addEventListener('input', updateWineList);
+    document.getElementById('threshold').addEventListener('change', e => { state.threshold = parseInt(e.target.value) || 0; updateDashboard(); });
+    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('inventorySort').addEventListener('change', updateDashboard);
+    document.getElementById('catalogSort').addEventListener('change', updateWineList);
+    document.getElementById('analysisReferenceFilter').addEventListener('input', updateAnalysisTable);
+    document.getElementById('analysisPeriod').addEventListener('change', updateAnalysisTable);
+    document.getElementById('analysisSort').addEventListener('change', updateAnalysisTable);
+    document.body.addEventListener('change', (e) => {
+        if (e.target.classList.contains('wine-select')) updateStockDisplay(e.target);
+        else if (e.target.matches('#type, #quickType, #editType')) handleRestockLogic(e.target);
+    });
+    window.addEventListener('click', (e) => { if (e.target === document.getElementById('editTransactionModal')) closeEditModal(); });
+    initRealTimeValidation();
+}
+
+function handleRestockLogic(selectElement) {
+    const form = selectElement.closest('form');
+    const referenceInput = form.querySelector('[name="reference"], [name="editReference"]');
+    if (!referenceInput) return;
+    if (selectElement.value === 'restock') {
+        referenceInput.value = 'Restock';
+        referenceInput.readOnly = true;
+    } else {
+        if (referenceInput.value === 'Restock') referenceInput.value = '';
+        referenceInput.readOnly = false;
+    }
+}
+
+function updateStockDisplay(selectElement) {
+    const wineId = parseInt(selectElement.value);
+    const parentForm = selectElement.closest('.wine-entry, #quickForm');
+    if (!parentForm) return;
+    const displayElement = parentForm.querySelector('.current-stock-display');
+    const validatorElement = parentForm.querySelector('.stock-validator');
+    if (validatorElement) validatorElement.innerHTML = '';
+    if (!displayElement) return;
+    if (!wineId) {
+        displayElement.innerHTML = '';
+        return;
+    }
+    const wine = state.wines.find(w => w.id === wineId);
+    if (wine) {
+        const stockInfo = getWineStockInfo(wine);
+        displayElement.innerHTML = `<strong>Stock : ${stockInfo.cases}c, ${stockInfo.bottles}b</strong>`;
+    }
+}
+
+// ===================================================================================
+// GESTION DES DONNÉES (CRUD AVEC SUPABASE)
+// ===================================================================================
+async function loadDataFromSupabase() {
+    setFormDisabled(true);
+    try {
+        const { data: winesData, error: winesError } = await supabaseClient.from('wines').select('*');
+        if (winesError) throw winesError;
+        state.wines = winesData;
+        const { data: transactionsData, error: transactionsError } = await supabaseClient.from('transactions').select('*').order('created_at', { ascending: false });
+        if (transactionsError) throw transactionsError;
+        state.transactions = transactionsData;
+    } catch (error) {
+        console.error("Erreur de chargement:", error.message);
+        showToast("Erreur: Impossible de charger les données.");
+    }
+    setFormDisabled(false);
+}
+
+async function handleAddWine(e) {
+    e.preventDefault();
+    setFormDisabled(true);
+    const name = document.getElementById('wineName').value.trim();
+    const type = document.getElementById('wineType').value;
+    const bottlesPerCase = parseInt(document.getElementById('bottlesPerCase').value);
+    if (!name || !type || !bottlesPerCase) { showToast('⚠️ Champs manquants.'); setFormDisabled(false); return; }
+    if (state.wines.some(w => w.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ Ce vin existe déjà.'); setFormDisabled(false); return; }
+    
+    const { error } = await supabaseClient.from('wines').insert({ name, type, bottles_per_case: bottlesPerCase, is_pinned: false });
+
+    if (error) {
+        showToast("Erreur lors de l'ajout du vin."); console.error(error);
+    } else {
+        showToast('🍷 Vin ajouté au catalogue');
+        e.target.reset();
+        await loadDataFromSupabase();
+        updateAll();
+    }
+    setFormDisabled(false);
+}
+
+async function handleQuickTransaction(e) { e.preventDefault(); await processTransaction(new FormData(e.target), 'quick'); }
+async function handleTransaction(e) { e.preventDefault(); await processTransaction(new FormData(e.target), 'detailed'); }
+
+function getWineStockInfo(wine) {
+    const cases = wine.stock_cases || 0;
+    const bottles = wine.stock_bottles || 0;
+    return { cases, bottles, total: (cases * (wine.bottles_per_case || 6)) + bottles };
+}
+
+async function processTransaction(formData, formType) {
+    setFormDisabled(true);
+    let type = formData.get(formType === 'quick' ? 'quickType' : 'type');
+    let reference = formData.get('reference') || (type === 'restock' ? 'Restock' : 'Transaction rapide');
+    let winesInTx = [], stockCheckFailed = false;
+
+    const processEntry = (wineId, cases, bottles) => {
+        const wine = state.wines.find(w => w.id === wineId);
+        if (wine && (cases > 0 || bottles > 0)) {
+            const stockInfo = getWineStockInfo(wine);
+            if (type === 'sortie' && (stockInfo.cases < cases || stockInfo.bottles < bottles)) stockCheckFailed = true;
+            winesInTx.push({ ...wine, transaction_cases: cases, transaction_bottles: bottles, currentStock: stockInfo });
+        }
+    };
+
+    if (formType === 'quick') {
+        processEntry(parseInt(formData.get('quickWine')), parseInt(formData.get('quickQtyCases')) || 0, parseInt(formData.get('quickQtyBottles')) || 0);
+    } else {
+        document.querySelectorAll('#wineEntries .wine-entry').forEach(entry => {
+            processEntry(parseInt(entry.querySelector('.wine-select').value), parseInt(entry.querySelector('.wine-cases').value) || 0, parseInt(entry.querySelector('.wine-bottles').value) || 0);
+        });
+    }
+
+    if (!type) { showToast('⚠️ Veuillez sélectionner un type.'); setFormDisabled(false); return; }
+    if (winesInTx.length === 0) { showToast('⚠️ Veuillez ajouter au moins un vin.'); setFormDisabled(false); return; }
+    if (stockCheckFailed) { showToast('⚠️ Stock insuffisant.'); setFormDisabled(false); return; }
+    
+    const multiplier = (type === 'sortie') ? -1 : 1;
+    const stockUpdates = winesInTx.map(txWine => {
+        const newCases = txWine.currentStock.cases + (txWine.transaction_cases * multiplier);
+        const newBottles = txWine.currentStock.bottles + (txWine.transaction_bottles * multiplier);
+        return supabaseClient.from('wines').update({ stock_cases: Math.max(0, newCases), stock_bottles: Math.max(0, newBottles) }).eq('id', txWine.id);
+    });
+
+    try {
+        await Promise.all(stockUpdates);
+        const wines_involved = winesInTx.map(w => ({ id: w.id, name: w.name, cases: w.transaction_cases, bottles: w.transaction_bottles }));
+        const { error: txError } = await supabaseClient.from('transactions').insert({ date: formData.get('date'), type, reference, wines_involved });
+        if (txError) throw txError;
+        await loadDataFromSupabase();
+        if (formType === 'quick') { document.getElementById('quickForm').reset(); document.querySelector('#quickForm .current-stock-display').innerHTML = ''; }
+        else { resetTransactionForm(); }
+        updateAll();
+        showToast('✅ Transaction enregistrée.');
+    } catch (error) { showToast("Erreur lors de la transaction."); console.error(error); }
+    setFormDisabled(false);
+}
+
+async function togglePin(wineId, currentStatus) {
+    setFormDisabled(true);
+    const { error } = await supabaseClient.from('wines').update({ is_pinned: !currentStatus }).eq('id', wineId);
+    if (error) { showToast("Erreur d'épinglage."); console.error(error.message); }
+    else {
+        const wineInState = state.wines.find(w => w.id === wineId);
+        if (wineInState) wineInState.is_pinned = !currentStatus;
+        updateWineList();
+        updateDashboard();
+    }
+    setFormDisabled(false);
+}
+
+async function deleteWine(id) {
+    if (state.transactions.some(t => (t.wines_involved || []).some(w => w.id === id))) return showToast('⚠️ Impossible : vin utilisé.');
+    if (!confirm('Voulez-vous vraiment supprimer ce vin ?')) return;
+    setFormDisabled(true);
+    const { error } = await supabaseClient.from('wines').delete().eq('id', id);
+    if (error) { showToast("Erreur de suppression."); console.error(error); }
+    else {
+        showToast('🗑️ Vin supprimé.');
+        await loadDataFromSupabase();
+        updateAll();
+    }
+    setFormDisabled(false);
+}
+
+async function deleteTransaction(id) {
+    if (!confirm('Voulez-vous supprimer cette transaction ? Le stock sera recalculé.')) return;
+    setFormDisabled(true);
+    const tx = state.transactions.find(t => t.id === id);
+    if (!tx) { setFormDisabled(false); return; }
+    const multiplier = tx.type === 'sortie' ? 1 : -1;
+    const stockUpdatePromises = (tx.wines_involved || []).map(txWine => {
+        const wineInState = state.wines.find(w => w.id === txWine.id);
+        if (!wineInState) return Promise.resolve();
+        const stockInfo = getWineStockInfo(wineInState);
+        const newCases = stockInfo.cases + ((txWine.cases || 0) * multiplier);
+        const newBottles = stockInfo.bottles + ((txWine.bottles || 0) * multiplier);
+        return supabaseClient.from('wines').update({ stock_cases: Math.max(0, newCases), stock_bottles: Math.max(0, newBottles) }).eq('id', txWine.id);
+    });
+    try {
+        await Promise.all(stockUpdatePromises);
+        const { error } = await supabaseClient.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+        await loadDataFromSupabase();
+        updateAll();
+        showToast('🗑️ Transaction supprimée.');
+    } catch(error) { showToast("Erreur d'annulation."); console.error(error); await loadDataFromSupabase(); updateAll(); }
+    setFormDisabled(false);
+}
+
+async function handleEditTransaction(e) {
+    e.preventDefault();
+    showToast("La modification n'est pas encore entièrement implémentée.");
+}
+
+// ===================================================================================
+// MISE À JOUR DE L'INTERFACE (UI)
+// ===================================================================================
+function getSortedWines(wines, sortType) {
+    const winesCopy = [...wines];
+    switch(sortType) {
+        case 'name': return winesCopy.sort((a, b) => a.name.localeCompare(b.name));
+        case 'name-desc': return winesCopy.sort((a, b) => b.name.localeCompare(a.name));
+        case 'type': return winesCopy.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+        case 'stock': return winesCopy.sort((a, b) => getWineStockInfo(a).total - getWineStockInfo(b).total);
+        case 'stock-desc': return winesCopy.sort((a, b) => getWineStockInfo(b).total - getWineStockInfo(a).total);
+        default: return winesCopy;
+    }
+}
+
+function updateDashboard() {
+    const dashboardContainer = document.getElementById('lowStockDashboard');
+    const pinnedWines = state.wines.filter(w => w.is_pinned).slice(0, 5);
+    if (pinnedWines.length === 0) { 
+        dashboardContainer.innerHTML = `<div class="alert alert-success" style="grid-column: 1 / -1;">Cliquez sur l'étoile ⭐ dans le catalogue pour épingler un vin ici.</div>`; 
+    } else {
+        dashboardContainer.innerHTML = pinnedWines.map(wine => {
+            const stockInfo = getWineStockInfo(wine);
+            let stockClass = stockInfo.total <= state.threshold ? 'critical' : (stockInfo.total <= state.threshold * 2 ? 'warning' : '');
+            return `<div class="low-stock-card"><div class="info"><span class="name">${wine.name}</span><span class="type-badge badge-${wine.type}">${wine.type}</span></div><div class="stock ${stockClass}">${stockInfo.total}</div></div>`;
+        }).join('');
+    }
+    const inventoryBody = document.getElementById('detailedInventory');
+    const inventoryMobile = document.getElementById('detailedInventoryMobile');
+    const sortedWines = getSortedWines(state.wines, document.getElementById('inventorySort').value);
+    inventoryBody.innerHTML = sortedWines.map(wine => { 
+        const stockInfo = getWineStockInfo(wine);
+        return `<tr><td>${getWineEmoji(wine.type)} ${wine.name}</td><td><strong>${stockInfo.cases}</strong></td><td><strong>${stockInfo.bottles}</strong></td><td><strong>${stockInfo.total}</strong></td></tr>`; 
+    }).join('');
+    inventoryMobile.innerHTML = sortedWines.map(wine => {
+        const stockInfo = getWineStockInfo(wine);
+        return `<div class="mobile-card"><div class="mobile-card-header"><span><strong>${getWineEmoji(wine.type)} ${wine.name}</strong></span><span class="type-badge badge-${wine.type}">${wine.type}</span></div><div class="mobile-card-content"><div class="mobile-card-row"><span class="label">Stock Caisses:</span><span><strong>${stockInfo.cases}</strong></span></div><div class="mobile-card-row"><span class="label">Stock Bouteilles:</span><span><strong>${stockInfo.bottles}</strong></span></div><div class="mobile-card-row"><span class="label">Total Bouteilles:</span><span><strong>${stockInfo.total}</strong></span></div></div></div>`;
+    }).join('');
+}
+
+function updateWineList() {
+    const tbody = document.getElementById('wineList');
+    const mobileContainer = document.getElementById('wineListMobile');
+    const search = document.getElementById('wineSearch').value.toLowerCase();
+    const filtered = state.wines.filter(w => w.name.toLowerCase().includes(search));
+    const sortedWines = getSortedWines(filtered, document.getElementById('catalogSort').value);
+    tbody.innerHTML = sortedWines.map(wine => `<tr><td>${getWineEmoji(wine.type)} ${wine.name}</td><td><span class="type-badge badge-${wine.type}">${wine.type}</span></td><td>${wine.bottles_per_case}</td><td style="display:flex; gap: 8px;"><button class="btn btn-secondary btn-small" onclick="togglePin(${wine.id}, ${wine.is_pinned})" title="Épingler">${wine.is_pinned ? '🌟' : '⭐'}</button><button class="btn btn-danger btn-small" onclick="deleteWine(${wine.id})">Supprimer</button></td></tr>`).join('');
+    mobileContainer.innerHTML = sortedWines.map(wine => `<div class="mobile-card"><div class="mobile-card-header"><span><strong>${getWineEmoji(wine.type)} ${wine.name}</strong></span><span class="type-badge badge-${wine.type}">${wine.type}</span></div><div class="mobile-card-content"><div class="mobile-card-row"><span class="label">Bouteilles / Caisse:</span><span>${wine.bottles_per_case}</span></div></div><div class="mobile-card-actions"><button class="btn btn-secondary btn-small" onclick="togglePin(${wine.id}, ${wine.is_pinned})">${wine.is_pinned ? '🌟 Épinglé' : '⭐ Épingler'}</button><button class="btn btn-danger btn-small" onclick="deleteWine(${wine.id})">Supprimer</button></div></div>`).join('');
+}
+
+function updateTransactionsTable() {
+    const tbody = document.getElementById('transactionsTable');
+    const mobileContainer = document.getElementById('transactionsTableMobile');
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = state.transactions.filter(t => (t.date + (t.reference || '') + (t.wines_involved || []).map(w => w.name).join(' ')).toLowerCase().includes(search));
+    tbody.innerHTML = filtered.map(t => {
+        const typeInfo = { entree:'in', sortie:'out', retour:'return', restock: 'restock' }[t.type] || 'in';
+        const winesDisplay = (t.wines_involved || []).map(w => `${w.name} (${w.cases||0}c, ${w.bottles||0}b)`).join(', ');
+        return `<tr><td>${new Date(t.date).toLocaleDateString('fr-FR')}</td><td><span class="status-badge status-${typeInfo}">${t.type}</span></td><td>${winesDisplay}</td><td>${t.reference || 'N/A'}</td><td><button class="btn btn-secondary btn-small" onclick="openEditModal(${t.id})">Modifier</button><button class="btn btn-danger btn-small" onclick="deleteTransaction(${t.id})">Supprimer</button></td></tr>`;
+    }).join('');
+    mobileContainer.innerHTML = filtered.map(t => {
+        const typeInfo = { entree:'in', sortie:'out', retour:'return', restock: 'restock' }[t.type] || 'in';
+        const winesDisplay = (t.wines_involved || []).map(w => `${w.name} (${w.cases||0}c, ${w.bottles||0}b)`).join('<br>');
+        return `<div class="mobile-card"><div class="mobile-card-header"><span><strong>${new Date(t.date).toLocaleDateString('fr-FR')}</strong></span><span class="status-badge status-${typeInfo}">${t.type}</span></div><div class="mobile-card-content"><div class="mobile-card-row"><span class="label">Vins:</span><span>${winesDisplay}</span></div><div class="mobile-card-row"><span class="label">Référence:</span><span>${t.reference || 'N/A'}</span></div></div><div class="mobile-card-actions"><button class="btn btn-secondary btn-small" onclick="openEditModal(${t.id})">Modifier</button><button class="btn btn-danger btn-small" onclick="deleteTransaction(${t.id})">Supprimer</button></div></div>`;
+    }).join('');
+}
+
+function updateAnalysisTable() {
+    const tbody = document.getElementById('analysisTable');
+    const mobileContainer = document.getElementById('analysisTableMobile');
+    const sortType = document.getElementById('analysisSort').value;
+    const referenceFilter = document.getElementById('analysisReferenceFilter').value.toLowerCase().trim();
+    let filteredTransactions = referenceFilter ? state.transactions.filter(t => t.reference && t.reference.toLowerCase().includes(referenceFilter)) : state.transactions;
+    const analysisData = state.wines.map(wine => {
+        const movements = { sortie: 0, retour: 0 };
+        filteredTransactions.forEach(t => {
+            const wineInTx = (t.wines_involved || []).find(w => w.id === wine.id);
+            if (wineInTx && (t.type === 'sortie' || t.type === 'retour')) {
+                const totalBottles = (wineInTx.cases || 0) * wine.bottles_per_case + (wineInTx.bottles || 0);
+                movements[t.type] += totalBottles;
+            }
+        });
+        const netConsumption = movements.sortie - movements.retour;
+        const returnRate = movements.sortie > 0 ? ((movements.retour / movements.sortie) * 100).toFixed(1) : 0;
+        return { name: wine.name, type: wine.type, sortie: movements.sortie, retour: movements.retour, netConsumption, returnRate: parseFloat(returnRate) };
+    }).filter(d => d.sortie > 0 || d.retour > 0);
+    
+    switch(sortType) {
+        case 'consumption': analysisData.sort((a, b) => b.netConsumption - a.netConsumption); break;
+        case 'returns': analysisData.sort((a, b) => b.retour - a.retour); break;
+        case 'rate': analysisData.sort((a, b) => b.returnRate - a.returnRate); break;
+        default: analysisData.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    tbody.innerHTML = analysisData.map(data => `<tr><td>${getWineEmoji(data.type)} ${data.name}</td><td>${data.sortie}</td><td>${data.retour}</td><td><strong>${data.netConsumption}</strong></td><td>${data.returnRate} %</td></tr>`).join('');
+    mobileContainer.innerHTML = analysisData.map(data => `<div class="mobile-card"><div class="mobile-card-header"><span><strong>${getWineEmoji(data.type)} ${data.name}</strong></span></div><div class="mobile-card-content"><div class="mobile-card-row"><span class="label">Total Sorties:</span><span>${data.sortie}</span></div><div class="mobile-card-row"><span class="label">Total Retours:</span><span>${data.retour}</span></div><div class="mobile-card-row"><span class="label">Consommation Nette:</span><span><strong>${data.netConsumption}</strong></span></div><div class="mobile-card-row"><span class="label">Taux de Retour:</span><span>${data.returnRate} %</span></div></div></div>`).join('');
+}
+
+// ===================================================================================
+// FONCTIONS UTILITAIRES
+// ===================================================================================
+function setFormDisabled(isDisabled) { document.querySelectorAll('button, input, select').forEach(el => el.disabled = isDisabled); }
+function switchTab(tabName) { document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelector(`[data-tab="${tabName}"]`).classList.add('active'); document.getElementById(tabName).classList.add('active'); const updateFn = { 'dashboard': updateDashboard, 'transactions': updateTransactionsTable, 'catalog': updateWineList, 'analysis': updateAnalysisTable }[tabName]; if (updateFn) updateFn(); }
+function updateAll() { updateDashboard(); updateWineSelects(); updateTransactionsTable(); updateWineList(); updateAnalysisTable(); }
+function showToast(message) { const toast = document.getElementById('toast'); document.getElementById('toastMsg').textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
+function addWineEntry(containerId = 'wineEntries') { const container = document.getElementById(containerId); const newId = Date.now(); const entryDiv = document.createElement('div'); entryDiv.className = 'wine-entry'; entryDiv.innerHTML = `<div class="form-group"><label class="form-label" for="wine-select-${newId}">Vin</label><select class="form-control wine-select" id="wine-select-${newId}" required></select><div class="current-stock-display"></div></div><div class="form-group"><label class="form-label" for="wine-cases-${newId}">Caisses</label><input type="number" class="form-control wine-cases" id="wine-cases-${newId}" min="0" placeholder="0"></div><div class="form-group"><label class="form-label" for="wine-bottles-${newId}">Bouteilles</label><input type="number" class="form-control wine-bottles" id="wine-bottles-${newId}" min="0" placeholder="0"><div class="stock-validator"></div></div><button type="button" class="btn btn-danger remove-btn">✕</button>`; container.appendChild(entryDiv); updateWineSelects(); entryDiv.querySelector('.remove-btn').addEventListener('click', () => entryDiv.remove()); }
+function resetTransactionForm() { document.getElementById('transactionForm').reset(); document.getElementById('date').valueAsDate = new Date(); document.getElementById('wineEntries').innerHTML = ''; addWineEntry(); }
+function getWineEmoji(type) { return { rouge: '🍷', blanc: '🥂', rose: '🌹', champagne: '🍾' }[type] || '🍇'; }
+function initRealTimeValidation() { document.body.addEventListener('input', e => { if (e.target.closest('#quickForm')) validateQuickForm(); else if(e.target.closest('.wine-entry')) validateStockForRow(e.target.closest('.wine-entry')); }); document.body.addEventListener('change', e => { if (e.target.id === 'quickType') validateQuickForm(); else if(e.target.id === 'type') document.querySelectorAll('#wineEntries .wine-entry').forEach(validateStockForRow); });}
+function validateQuickForm() { const type = document.getElementById('quickType').value; const validatorEl = document.getElementById('quickStockValidator'); if (type !== 'sortie') { validatorEl.innerHTML = ''; return; } const wineId = parseInt(document.getElementById('quickWine').value); const cases = parseInt(document.getElementById('quickQtyCases').value) || 0; const bottles = parseInt(document.getElementById('quickQtyBottles').value) || 0; if (!wineId) { validatorEl.innerHTML = ''; return; } const wine = state.wines.find(w => w.id === wineId); if (!wine) return; const stockInfo = getWineStockInfo(wine); if (cases > stockInfo.cases || bottles > stockInfo.bottles) { validatorEl.innerHTML = `<span class="invalid">⚠️ Stock insuffisant</span>`; } else if (cases > 0 || bottles > 0) { validatorEl.innerHTML = `<span class="valid">✅ En stock</span>`; } else { validatorEl.innerHTML = ''; } }
+function validateStockForRow(entryElement, typeFieldId = 'type') { const type = document.getElementById(typeFieldId).value; const validatorEl = entryElement.querySelector('.stock-validator'); if (type !== 'sortie') { validatorEl.innerHTML = ''; return; } const wineId = parseInt(entryElement.querySelector('.wine-select').value); const cases = parseInt(entryElement.querySelector('.wine-cases').value) || 0; const bottles = parseInt(entryElement.querySelector('.wine-bottles').value) || 0; if (!wineId) { validatorEl.innerHTML = ''; return; } const wine = state.wines.find(w => w.id === wineId); if (!wine) return; let stockInfo = getWineStockInfo(wine); if (cases > stockInfo.cases || bottles > stockInfo.bottles) { validatorEl.innerHTML = `<span class="invalid">⚠️ Stock insuffisant</span>`; } else if (cases > 0 || bottles > 0) { validatorEl.innerHTML = `<span class="valid">✅ En stock</span>`; } else { validatorEl.innerHTML = ''; } }
+function updateWineSelects() { document.querySelectorAll('.wine-select').forEach(select => { const currentVal = select.value; select.innerHTML = '<option value="">Choisir un vin...</option>'; ['rouge', 'blanc', 'rose', 'champagne'].forEach(type => { const winesOfType = state.wines.filter(w => w.type === type).sort((a,b) => a.name.localeCompare(b.name)); if (winesOfType.length > 0) { const optgroup = document.createElement('optgroup'); optgroup.label = `${getWineEmoji(type)} ${type.charAt(0).toUpperCase() + type.slice(1)}s`; winesOfType.forEach(wine => { optgroup.innerHTML += `<option value="${wine.id}">${wine.name}</option>`; }); select.appendChild(optgroup); } }); select.value = currentVal; }); }
+function exportData() { let csvContent = "data:text/csv;charset=utf-8,ID Vin,Nom,Type,Stock Caisses,Stock Bouteilles,Total Bouteilles,Bouteilles par Caisse\r\n"; state.wines.forEach(w => { const stockInfo = getWineStockInfo(w); csvContent += `${w.id},"${w.name}",${w.type},${stockInfo.cases},${stockInfo.bottles},${stockInfo.total},${w.bottles_per_case}\r\n`; }); const link = document.createElement("a"); link.href = encodeURI(csvContent); link.download = `inventaire_${new Date().toISOString().split('T')[0]}.csv`; link.click(); }
+function printInventory() { const printWindow = window.open('', '_blank'); printWindow.document.write(`<html><head><title>Inventaire</title><style>body{font-family:sans-serif;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #ccc; padding:8px;}</style></head><body><h1>Inventaire au ${new Date().toLocaleDateString('fr-FR')}</h1>${document.querySelector('#detailedInventory').parentElement.outerHTML}</body></html>`); printWindow.document.close(); setTimeout(() => printWindow.print(), 500); }
+function openEditModal(id) { showToast("La modification n'est pas encore implémentée."); }
+function closeEditModal() { document.getElementById('editTransactionModal').style.display = 'none'; }
+</script>
+</body>
+</html>
