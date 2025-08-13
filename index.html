@@ -190,7 +190,7 @@
 
 <script>
 // ===================================================================================
-// VERSION FINALE COMPLÈTE DU SCRIPT (SANS REDIRECTION)
+// VERSION FINALE COMPLÈTE DU SCRIPT (AVEC CORRECTIONS USER_ID)
 // ===================================================================================
 
 const SUPABASE_URL = "https://jvthgikhwaxiqxsjmacl.supabase.co";
@@ -209,6 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
+    // Récupérer l'utilisateur connecté
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    state.user = user;
+    
     initEventListeners();
     addWineEntry();
     showToast('Connexion à la base de données...');
@@ -313,7 +317,14 @@ async function handleAddWine(e) {
     if (!name || !type || !bottlesPerCase) { showToast('⚠️ Champs manquants.'); setFormDisabled(false); return; }
     if (state.wines.some(w => w.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ Ce vin existe déjà.'); setFormDisabled(false); return; }
     
-    const { error } = await supabaseClient.from('wines').insert({ name, type, bottles_per_case: bottlesPerCase, is_pinned: false });
+    // CORRECTION 1: Ajouter user_id lors de la création d'un vin
+    const { error } = await supabaseClient.from('wines').insert({ 
+        name, 
+        type, 
+        bottles_per_case: bottlesPerCase, 
+        is_pinned: false,
+        user_id: state.user?.id
+    });
 
     if (error) {
         showToast("Erreur lors de l'ajout du vin."); console.error(error);
@@ -372,7 +383,16 @@ async function processTransaction(formData, formType) {
     try {
         await Promise.all(stockUpdates);
         const wines_involved = winesInTx.map(w => ({ id: w.id, name: w.name, cases: w.transaction_cases, bottles: w.transaction_bottles }));
-        const { error: txError } = await supabaseClient.from('transactions').insert({ date: formData.get('date'), type, reference, wines_involved });
+        
+        // CORRECTION 2: Ajouter user_id lors de la création d'une transaction
+        const { error: txError } = await supabaseClient.from('transactions').insert({ 
+            date: formData.get('date'), 
+            type, 
+            reference, 
+            wines_involved,
+            user_id: state.user?.id
+        });
+        
         if (txError) throw txError;
         await loadDataFromSupabase();
         if (formType === 'quick') { document.getElementById('quickForm').reset(); document.querySelector('#quickForm .current-stock-display').innerHTML = ''; }
