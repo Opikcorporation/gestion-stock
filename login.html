@@ -9,12 +9,19 @@
         :root { 
             --primary-color: #007aff; 
             --danger-color: #dc3545; 
+            --success-color: #28a745;
             --background-color: #f5f5f7; 
             --card-background-color: #ffffff; 
             --text-color: #1d1d1f; 
+            --text-light-color: #6e6e73;
             --border-color: #e5e5e7; 
             --border-radius: 12px; 
             --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         body { 
             font-family: var(--font-family); 
@@ -23,92 +30,183 @@
             align-items: center; 
             justify-content: center; 
             min-height: 100vh; 
-            margin: 0; 
+            margin: 0;
+            color: var(--text-color);
         }
         .login-card { 
             background-color: var(--card-background-color); 
             padding: 32px 40px; 
             border-radius: var(--border-radius); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             width: 100%; 
-            max-width: 400px; 
+            max-width: 400px;
+            border: 1px solid var(--border-color);
         }
         .login-header { 
             text-align: center; 
-            margin-bottom: 24px; 
+            margin-bottom: 32px; 
         }
         .login-header h1 { 
-            font-size: 2rem; 
-            margin-bottom: 8px; 
+            font-size: 2.2rem; 
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-weight: 700;
+        }
+        .login-header p {
+            color: var(--text-light-color);
+            font-size: 1.1rem;
+            font-weight: 400;
         }
         .form-group { 
-            margin-bottom: 16px; 
+            margin-bottom: 20px; 
         }
         .form-label { 
             display: block; 
             margin-bottom: 8px; 
-            font-weight: 500; 
+            font-weight: 600; 
+            color: var(--text-color);
+            font-size: 0.95rem;
         }
         .form-control { 
             width: 100%; 
-            padding: 12px; 
+            padding: 12px 16px; 
             border: 1px solid var(--border-color); 
             border-radius: 8px; 
             font-size: 1rem; 
             box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: #fdfdfd;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
         }
         .form-actions { 
             display: flex; 
             gap: 12px; 
-            margin-top: 24px; 
+            margin-top: 32px; 
         }
         .btn { 
             width: 100%; 
-            padding: 12px; 
+            padding: 12px 24px; 
             border: none; 
             border-radius: 8px; 
             font-size: 1rem; 
             font-weight: 600; 
             cursor: pointer; 
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:disabled {
+            background-color: #e9e9eb;
+            color: #aaa;
+            cursor: not-allowed;
         }
         .btn-primary { 
             background-color: var(--primary-color); 
             color: white; 
         }
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.85;
+        }
         .btn-secondary { 
             background-color: #e9e9eb; 
-            color: var(--text-color); 
+            color: var(--text-color);
         }
-        .error-message { 
-            color: var(--danger-color); 
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #dcdce0;
+        }
+        .message { 
             text-align: center; 
-            margin-top: 16px; 
+            margin-top: 20px; 
             min-height: 1.5em; 
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .message.error {
+            color: var(--danger-color);
+            background-color: #fff5f5;
+            border: 1px solid #fed7d7;
+        }
+        .message.success {
+            color: var(--success-color);
+            background-color: #f0fff4;
+            border: 1px solid #9ae6b4;
+        }
+        .message.info {
+            color: var(--primary-color);
+            background-color: #ebf8ff;
+            border: 1px solid #90cdf4;
+        }
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.8rem;
+            color: var(--text-light-color);
+        }
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 16px 20px;
+                margin: 16px;
+            }
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="login-header">
-            <h1>Bienvenue</h1>
-            <p>Connectez-vous à votre espace</p>
+            <h1>🍷 La Boutique Concept</h1>
+            <p>Gestion de Stock</p>
         </div>
         <form id="authForm">
             <div class="form-group">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" id="email" class="form-control" required>
+                <label for="email" class="form-label">Adresse email</label>
+                <input type="email" id="email" class="form-control" required placeholder="votre@email.com">
             </div>
             <div class="form-group">
                 <label for="password" class="form-label">Mot de passe</label>
-                <input type="password" id="password" class="form-control" required>
+                <input type="password" id="password" class="form-control" required placeholder="••••••••" minlength="6">
             </div>
             <div class="form-actions">
-                <button type="submit" id="loginBtn" class="btn btn-primary">Se connecter</button>
-                <button type="button" id="signupBtn" class="btn btn-secondary">S'inscrire</button>
+                <button type="submit" id="loginBtn" class="btn btn-primary">
+                    <span class="btn-text">Se connecter</span>
+                    <div class="spinner" style="display: none;"></div>
+                </button>
+                <button type="button" id="signupBtn" class="btn btn-secondary">
+                    <span class="btn-text">S'inscrire</span>
+                    <div class="spinner" style="display: none;"></div>
+                </button>
             </div>
-            <p id="errorMessage" class="error-message"></p>
+            <div id="message" class="message"></div>
         </form>
+        <div class="footer">
+            <p>Développé par Osmaweb</p>
+        </div>
     </div>
 
     <script>
@@ -122,36 +220,170 @@
         const signupBtn = document.getElementById('signupBtn');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
-        const errorMessage = document.getElementById('errorMessage');
+        const messageDiv = document.getElementById('message');
 
-        // Gérer la connexion
-        loginBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            errorMessage.textContent = '';
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: emailInput.value,
-                password: passwordInput.value,
-            });
-
-            if (error) {
-                errorMessage.textContent = 'Email ou mot de passe incorrect.';
-            } else {
-                window.location.href = 'index.html'; // Redirection vers l'application principale
+        // Vérifier si déjà connecté au chargement
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (user) {
+                    showMessage('Vous êtes déjà connecté. Redirection...', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                console.log('Pas encore connecté');
             }
         });
 
-        // Gérer l'inscription
-        signupBtn.addEventListener('click', async () => {
-            errorMessage.textContent = '';
-            const { data, error } = await supabaseClient.auth.signUp({
-                email: emailInput.value,
-                password: passwordInput.value,
-            });
+        function showMessage(text, type = 'info') {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+        }
 
-            if (error) {
-                errorMessage.textContent = error.message;
+        function setLoading(button, isLoading) {
+            const btnText = button.querySelector('.btn-text');
+            const spinner = button.querySelector('.spinner');
+            
+            if (isLoading) {
+                button.disabled = true;
+                btnText.style.display = 'none';
+                spinner.style.display = 'block';
+                document.body.classList.add('loading');
             } else {
-                errorMessage.textContent = 'Compte créé ! Vérifiez vos emails pour confirmer, puis connectez-vous.';
+                button.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+                document.body.classList.remove('loading');
+            }
+        }
+
+        function validateInputs() {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!email) {
+                showMessage('Veuillez saisir votre adresse email.', 'error');
+                emailInput.focus();
+                return false;
+            }
+            
+            if (!email.includes('@')) {
+                showMessage('Veuillez saisir une adresse email valide.', 'error');
+                emailInput.focus();
+                return false;
+            }
+            
+            if (!password) {
+                showMessage('Veuillez saisir votre mot de passe.', 'error');
+                passwordInput.focus();
+                return false;
+            }
+            
+            if (password.length < 6) {
+                showMessage('Le mot de passe doit contenir au moins 6 caractères.', 'error');
+                passwordInput.focus();
+                return false;
+            }
+            
+            return true;
+        }
+
+        // ✅ CORRECTION : Gérer la soumission du formulaire (connexion)
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!validateInputs()) return;
+            
+            setLoading(loginBtn, true);
+            showMessage('Connexion en cours...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: emailInput.value.trim(),
+                    password: passwordInput.value.trim(),
+                });
+
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('Connexion réussie ! Redirection...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                if (error.message.includes('Invalid login credentials')) {
+                    showMessage('Email ou mot de passe incorrect.', 'error');
+                } else if (error.message.includes('Email not confirmed')) {
+                    showMessage('Veuillez confirmer votre email avant de vous connecter.', 'error');
+                } else {
+                    showMessage('Erreur de connexion : ' + error.message, 'error');
+                }
+            } finally {
+                setLoading(loginBtn, false);
+            }
+        });
+
+        // ✅ CORRECTION : Gérer l'inscription avec preventDefault
+        signupBtn.addEventListener('click', async (e) => {
+            e.preventDefault(); // ← AJOUTÉ : Empêche la soumission du formulaire
+            
+            if (!validateInputs()) return;
+            
+            setLoading(signupBtn, true);
+            showMessage('Création du compte en cours...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: emailInput.value.trim(),
+                    password: passwordInput.value.trim(),
+                });
+
+                if (error) {
+                    throw error;
+                }
+                
+                if (data.user && !data.user.email_confirmed_at) {
+                    showMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.', 'success');
+                } else {
+                    showMessage('Compte créé ! Connectez-vous maintenant.', 'success');
+                }
+                
+                // Vider le formulaire
+                passwordInput.value = '';
+                
+            } catch (error) {
+                console.error('Erreur d\'inscription:', error);
+                if (error.message.includes('User already registered')) {
+                    showMessage('Un compte existe déjà avec cet email. Connectez-vous.', 'error');
+                } else if (error.message.includes('Password should be at least')) {
+                    showMessage('Le mot de passe doit contenir au moins 6 caractères.', 'error');
+                } else if (error.message.includes('Unable to validate email address')) {
+                    showMessage('Adresse email invalide.', 'error');
+                } else {
+                    showMessage('Erreur lors de la création du compte : ' + error.message, 'error');
+                }
+            } finally {
+                setLoading(signupBtn, false);
+            }
+        });
+
+        // Effacer les messages d'erreur quand l'utilisateur tape
+        emailInput.addEventListener('input', () => {
+            if (messageDiv.classList.contains('error')) {
+                messageDiv.textContent = '';
+                messageDiv.className = 'message';
+            }
+        });
+
+        passwordInput.addEventListener('input', () => {
+            if (messageDiv.classList.contains('error')) {
+                messageDiv.textContent = '';
+                messageDiv.className = 'message';
             }
         });
     </script>
